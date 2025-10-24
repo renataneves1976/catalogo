@@ -4,10 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Artesanato Encantado - Catálogo e Encomenda</title>
-    <!-- Carrega Tailwind CSS -->
+    
+    <!-- Carregamento do Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Configuração da fonte Inter (Moderna) -->
+    
+    <!-- Fonte Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Lightbox2 CSS para o efeito de galeria -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/css/lightbox.min.css" rel="stylesheet" />
+
     <style>
         /* Estilos personalizados */
         :root {
@@ -22,20 +28,57 @@
             background-color: var(--color-bg);
             color: var(--color-text);
         }
-        /* Efeito de seleção na galeria (responsivo a toque) */
+        
+        /* Estilo do Cartão - Responsável pela Borda de Seleção */
         .product-card {
             transition: all 0.3s ease-in-out;
-            touch-action: manipulation; /* Otimização para toque */
+            touch-action: manipulation;
+            border: 2px solid transparent;
         }
         .product-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
+        /* Efeito visual de SELECIONADO */
         .selected {
-            border: 4px solid var(--color-primary) !important;
+            border-color: var(--color-primary) !important;
             box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.5);
             transform: scale(1.02);
         }
+        
+        /* Estilo para o ícone de pisco (tick) no canto */
+        .selection-tick {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 10; 
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px; /* rounded-full */
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            transform: scale(1);
+            border: 2px solid #fff;
+        }
+        .selection-tick:hover {
+            transform: scale(1.1);
+        }
+        .selection-tick-icon {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        /* Estilos quando o produto está selecionado */
+        .selected .selection-tick {
+            background-color: var(--color-primary); 
+            border-color: var(--color-primary);
+        }
+        .selected .selection-tick-icon {
+            opacity: 1;
+        }
+
         /* Estilos para o botão primário */
         .btn-primary {
             background-color: var(--color-primary);
@@ -44,12 +87,19 @@
         .btn-primary:hover {
             background-color: #8b5cf6;
         }
+        
+        /* Ajustes para Lightbox */
+        .lb-outerContainer { 
+            border-radius: 12px !important; 
+            overflow: hidden !important;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2), 0 10px 10px -5px rgba(0,0,0,0.08) !important;
+        }
     </style>
 </head>
 <body class="min-h-screen antialiased">
 
-    <!-- Cabeçalho Fixo (Adaptado a Mobile: padding extra e sombra) -->
-    <header class="bg-white shadow-lg sticky top-0 z-10">
+    <!-- Cabeçalho Fixo -->
+    <header class="bg-white shadow-lg sticky top-0 z-20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
             <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-800">Artesanato Encantado</h1>
             <nav class="flex space-x-2 sm:space-x-4">
@@ -62,18 +112,21 @@
     </header>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <!-- Notificação de Feedback (Posicionamento responsivo) -->
-        <div id="feedback-message" class="fixed top-20 right-4 p-4 rounded-lg shadow-xl text-white font-semibold transition-all duration-300 transform translate-x-full z-20 w-4/5 sm:w-auto" style="min-width: 250px;"></div>
+        
+        <!-- Mensagem de Feedback -->
+        <div id="feedback-message" class="fixed top-20 right-4 p-4 rounded-lg shadow-xl text-white font-semibold transition-all duration-300 transform translate-x-full z-30 w-4/5 sm:w-auto" style="min-width: 250px;"></div>
 
 
-        <!-- PÁGINA 1: CATÁLOGO / GALERIA -->
+        <!-- SECÇÃO: CATÁLOGO -->
         <section id="catalogue-page" class="page-section">
             <h2 class="text-3xl sm:text-4xl font-bold mb-4 sm:mb-8 text-center text-gray-800">Nosso Catálogo de Produtos</h2>
-            <p class="text-center text-gray-600 mb-8 sm:mb-12 text-sm sm:text-base">Clique nas fotos para selecionar um ou mais produtos para a sua encomenda.</p>
+            <p class="text-center text-gray-600 mb-8 sm:mb-12 text-sm sm:text-base">
+                Clique na imagem para ver em detalhe ou use o pisco (<span class="font-bold text-purple-600">✓</span>) para adicionar ao seu pedido.
+            </p>
 
-            <!-- Grelha Responsiva (Mais colunas em desktop, menos em mobile) -->
+            <!-- Contentor da Galeria -->
             <div id="gallery-container" class="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 sm:gap-6">
-                <!-- As 22 fotos serão inseridas aqui via JavaScript -->
+                <!-- Produtos inseridos pelo JavaScript -->
             </div>
 
             <div class="mt-8 sm:mt-12 text-center">
@@ -83,22 +136,23 @@
             </div>
         </section>
 
-        <!-- PÁGINA 2: FORMULÁRIO DE ENCOMENDA -->
+        <!-- SECÇÃO: ENCOMENDA -->
         <section id="order-page" class="page-section hidden">
             <h2 class="text-3xl sm:text-4xl font-bold mb-4 text-center text-gray-800">Finalizar Encomenda</h2>
             <p class="text-center text-gray-600 mb-6 sm:mb-8">Preencha os seus dados para confirmarmos o pedido.</p>
 
             <div class="max-w-2xl mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-lg border border-gray-100">
                 <form id="order-form" class="space-y-6">
-                    <!-- Detalhes dos Produtos Selecionados -->
+                    
+                    <!-- Produtos Selecionados Display -->
                     <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Produtos Selecionados</label>
                         <textarea id="selected-products-display" rows="3" readonly class="w-full p-2 border border-purple-300 rounded-lg bg-white text-gray-700 font-mono text-sm resize-none" placeholder="Nenhum produto selecionado"></textarea>
-                        <!-- Campo oculto para o Apps Script -->
+                        
                         <input type="hidden" id="produtos_selecionados_input" name="produtos_selecionados" required>
                     </div>
 
-                    <!-- Campos do Formulário -->
+                    <!-- Dados do Cliente -->
                     <div>
                         <label for="nome" class="block text-sm font-medium text-gray-700">Nome Completo</label>
                         <input type="text" id="nome" name="nome" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 p-3 border">
@@ -131,6 +185,7 @@
                         <textarea id="mensagem" name="mensagem" rows="4" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 p-3 border"></textarea>
                     </div>
 
+                    <!-- Botões de Ação -->
                     <div class="flex flex-col sm:flex-row justify-between items-center pt-4 space-y-4 sm:space-y-0">
                         <button type="button" class="text-gray-600 hover:text-gray-900 font-semibold text-sm" onclick="showPage('catalogue')">
                             ← Voltar ao Catálogo
@@ -148,6 +203,9 @@
         </section>
     </main>
 
+    <!-- Lightbox2 JS (requer jQuery, que está incluído neste pacote) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/js/lightbox-plus-jquery.min.js"></script>
+    
     <script>
         // *** CONFIGURAÇÃO CRÍTICA ATUALIZADA ***
         // URL da Google Apps Script fornecido pelo utilizador.
@@ -158,10 +216,10 @@
         const products = Array.from({ length: totalProducts }, (_, i) => ({
             id: i + 1,
             name: `Produto ${i + 1}`,
-            // Usa placeholder para simular as suas fotos (1.jpg, 2.jpg, ...)
-            imageUrl: `https://placehold.co/150x150/a78bfa/ffffff?text=${i + 1}.jpg`,
-            // Caminho real da imagem. Assumimos que '1.jpg', '2.jpg', etc., estão na mesma pasta que o index.html.
-            realImageUrl: `${i + 1}.jpg` // ALTERADO: removida a pasta 'fotos/'
+            // Caminho real da imagem AGORA COM .jpeg
+            realImageUrl: `./${i + 1}.jpeg`, 
+            // Placeholder de fallback, caso a imagem falhe ao carregar
+            imageUrl: `https://placehold.co/150x150/a78bfa/ffffff?text=${i + 1}.jpeg` 
         }));
         
         // Estado da Aplicação
@@ -205,7 +263,7 @@
                 feedbackMessage.classList.remove('translate-x-full');
             }, 50);
 
-            // Slide out after 7 seconds (Aumentei o tempo para melhor leitura)
+            // Slide out after 7 seconds
             setTimeout(() => {
                 feedbackMessage.classList.add('translate-x-full');
             }, 7000);
@@ -264,9 +322,11 @@
          * Cria e insere as miniaturas dos produtos na galeria.
          */
         function renderGallery() {
-            galleryContainer.innerHTML = ''; // Limpa o conteúdo existente
+            galleryContainer.innerHTML = ''; 
 
             products.forEach(product => {
+                const isSelected = selectedProductIds.has(product.id);
+                
                 const card = document.createElement('div');
                 card.id = `product-${product.id}`;
                 card.classList.add(
@@ -275,31 +335,68 @@
                     'rounded-xl', 
                     'shadow-md', 
                     'overflow-hidden', 
-                    'cursor-pointer', 
                     'transition-all', 
                     'duration-300', 
-                    'border-2', 
-                    'border-transparent',
-                    'hover:border-purple-400'
+                    'relative', // Para posicionar o pisco
+                    isSelected ? 'selected' : 'border-transparent' // Define o estado inicial da borda
                 );
-                card.setAttribute('data-id', product.id);
-                card.onclick = () => toggleSelection(product.id);
+                
+                // 1. Link Lightbox (responsável pelo zoom/galeria)
+                const imageLink = document.createElement('a');
+                imageLink.href = product.realImageUrl;
+                imageLink.setAttribute('data-lightbox', 'product-gallery'); // Agrupa todas as imagens numa galeria
+                imageLink.setAttribute('data-title', product.name);
+                imageLink.classList.add('block', 'aspect-square'); // Ocupa o espaço da imagem
 
-                card.innerHTML = `
-                    <div class="aspect-square bg-gray-100 overflow-hidden">
-                        <img 
-                            src="${product.realImageUrl}" 
-                            onerror="this.onerror=null; this.src='${product.imageUrl}'"
-                            alt="${product.name}" 
-                            loading="lazy"
-                            class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        >
-                    </div>
-                    <div class="p-3 text-center">
-                        <p class="text-sm font-semibold text-gray-800 truncate">${product.name}</p>
-                        <span class="text-xs text-gray-500">Clique para selecionar</span>
-                    </div>
+                // Imagem
+                imageLink.innerHTML = `
+                    <img 
+                        src="${product.realImageUrl}" 
+                        onerror="this.onerror=null; this.src='${product.imageUrl}'"
+                        alt="${product.name}" 
+                        loading="lazy"
+                        class="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                    >
                 `;
+                card.appendChild(imageLink);
+
+
+                // 2. Pisco de Seleção (Tick/Checkbox)
+                const tickContainer = document.createElement('div');
+                tickContainer.id = `tick-${product.id}`;
+                tickContainer.classList.add('selection-tick', 'bg-white', 'shadow-md');
+                // Aplica a classe 'selected' ao tickContainer se estiver selecionado
+                if (isSelected) {
+                    tickContainer.classList.add('selected');
+                }
+
+                // Evento de clique para seleção
+                tickContainer.onclick = (e) => {
+                    e.stopPropagation(); // É CRÍTICO para que o clique não ative o Lightbox
+                    toggleSelection(product.id);
+                };
+
+                // Ícone SVG de pisco (tick)
+                tickContainer.innerHTML = `
+                    <svg class="selection-tick-icon w-6 h-6 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.07l-7.427 9.873a.75.75 0 0 1-1.127.07l-4.743-4.744a.75.75 0 0 1 1.06-1.06l4.218 4.219 6.99-9.293a.75.75 0 0 1 1.07-.208Z" clip-rule="evenodd" />
+                    </svg>
+                `;
+                // Se estiver selecionado, garantimos que o ícone está visível
+                if (isSelected) {
+                    tickContainer.querySelector('.selection-tick-icon').classList.remove('opacity-0');
+                } else {
+                    tickContainer.querySelector('.selection-tick-icon').classList.add('opacity-0');
+                }
+
+                card.appendChild(tickContainer);
+
+                // 3. Nome do Produto (em baixo)
+                const productName = document.createElement('div');
+                productName.classList.add('p-3', 'text-center');
+                productName.innerHTML = `<p class="text-sm font-semibold text-gray-800 truncate">${product.name}</p>`;
+                card.appendChild(productName);
+                
                 galleryContainer.appendChild(card);
             });
         }
@@ -311,12 +408,21 @@
          */
         function toggleSelection(productId) {
             const card = document.getElementById(`product-${productId}`);
+            const tickContainer = document.getElementById(`tick-${productId}`);
+            const tickIcon = tickContainer.querySelector('.selection-tick-icon');
+
             if (selectedProductIds.has(productId)) {
+                // Desselecionar
                 selectedProductIds.delete(productId);
                 card.classList.remove('selected');
+                tickContainer.classList.remove('selected');
+                tickIcon.classList.add('opacity-0');
             } else {
+                // Selecionar
                 selectedProductIds.add(productId);
                 card.classList.add('selected');
+                tickContainer.classList.add('selected');
+                tickIcon.classList.remove('opacity-0');
             }
             updateSelectionCount();
         }
@@ -350,7 +456,6 @@
         async function submitOrder(e) {
             e.preventDefault();
 
-            // Última verificação de segurança no frontend
             if (selectedProductIds.size === 0) {
                  showFeedback("Por favor, selecione pelo menos um produto no catálogo.", 'error');
                  return;
@@ -358,17 +463,13 @@
 
             toggleLoading(true);
 
-            // Cria o objeto FormData a partir do formulário
             const formData = new FormData(orderForm);
-            
-            // Cria um objeto de URLSearchParams para o formato esperado pelo Apps Script
             const params = new URLSearchParams();
             for (const [key, value] of formData.entries()) {
                 params.append(key, value);
             }
 
             try {
-                // Tenta fazer o fetch com 3 tentativas (exponential backoff simulado)
                 let response;
                 let result;
                 let success = false;
@@ -383,35 +484,33 @@
                         }
                     });
 
-                    // Verifica se o fetch correu bem (status HTTP 200)
                     if (response.ok) {
                         const resultText = await response.text();
                         try {
                             result = JSON.parse(resultText);
                             if (result.result === 'success') {
                                 success = true;
-                                break; // Sai do loop de tentativas
+                                break;
                             } else {
                                 throw new Error(result.message || "Erro desconhecido na Apps Script.");
                             }
                         } catch (e) {
-                            // Erro ao analisar JSON, tentar novamente
                             console.warn(`Tentativa ${i+1}: Resposta JSON inválida.`, resultText);
                         }
                     }
                     
                     if (i < 2) {
-                        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i))); // Espera 1s, depois 2s
+                        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i))); 
                     }
                 }
                 
                 if (success) {
                     showFeedback("Encomenda submetida com sucesso! Obrigado! Em breve entraremos em contacto.", 'success');
-                    orderForm.reset(); // Limpa o formulário
-                    selectedProductIds.clear(); // Limpa a seleção
+                    orderForm.reset();
+                    selectedProductIds.clear();
                     updateSelectionCount();
-                    renderGallery(); // Redesenha a galeria para limpar o estado visual
-                    showPage('catalogue'); // Volta ao catálogo
+                    renderGallery();
+                    showPage('catalogue');
                 } else {
                     throw new Error("Falha na submissão após várias tentativas ou erro de Apps Script.");
                 }
@@ -427,12 +526,19 @@
 
         // --- INICIALIZAÇÃO ---
         
-        // 1. Renderiza a galeria e configura o formulário quando a página carrega
         window.onload = () => {
             renderGallery();
             updateSelectionCount();
             orderForm.addEventListener('submit', submitOrder);
-            showPage('catalogue'); // Garante que começa no catálogo
+            showPage('catalogue'); 
+
+            // Configuração do Lightbox (para garantir que funciona corretamente)
+            lightbox.option({
+                'resizeDuration': 200,
+                'wrapAround': true,
+                'albumLabel': "Imagem %1 de %2", 
+                'alwaysShowNavButton': true 
+            });
         };
 
     </script>
