@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artesanato Encantado - Catálogo e Encomenda</title>
+    <!-- Carrega Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configuração da fonte Inter (Moderna) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos personalizados */
+        :root {
+            --color-primary: #a78bfa; /* Violeta Suave */
+            --color-secondary: #fcd34d; /* Ouro Suave */
+            --color-bg: #f8f8f8;
+            --color-card-bg: #ffffff;
+            --color-text: #1f2937;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-text);
+        }
+        /* Efeito de seleção na galeria (responsivo a toque) */
+        .product-card {
+            transition: all 0.3s ease-in-out;
+            touch-action: manipulation; /* Otimização para toque */
+        }
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .selected {
+            border: 4px solid var(--color-primary) !important;
+            box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.5);
+            transform: scale(1.02);
+        }
+        /* Estilos para o botão primário */
+        .btn-primary {
+            background-color: var(--color-primary);
+            transition: background-color 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: #8b5cf6;
+        }
+    </style>
+</head>
+<body class="min-h-screen antialiased">
+
+    <!-- Cabeçalho Fixo (Adaptado a Mobile: padding extra e sombra) -->
+    <header class="bg-white shadow-lg sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-800">Artesanato Encantado</h1>
+            <nav class="flex space-x-2 sm:space-x-4">
+                <button id="nav-catalogue" class="font-medium text-gray-500 hover:text-gray-900 transition p-2" onclick="showPage('catalogue')">Catálogo</button>
+                <button id="nav-order" class="btn-primary text-white py-2 px-3 sm:px-4 rounded-lg font-semibold shadow-md transition-all text-sm sm:text-base" onclick="showPage('order')">
+                    Encomendar
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <!-- Notificação de Feedback (Posicionamento responsivo) -->
+        <div id="feedback-message" class="fixed top-20 right-4 p-4 rounded-lg shadow-xl text-white font-semibold transition-all duration-300 transform translate-x-full z-20 w-4/5 sm:w-auto" style="min-width: 250px;"></div>
+
+
+        <!-- PÁGINA 1: CATÁLOGO / GALERIA -->
+        <section id="catalogue-page" class="page-section">
+            <h2 class="text-3xl sm:text-4xl font-bold mb-4 sm:mb-8 text-center text-gray-800">Nosso Catálogo de Produtos</h2>
+            <p class="text-center text-gray-600 mb-8 sm:mb-12 text-sm sm:text-base">Clique nas fotos para selecionar um ou mais produtos para a sua encomenda.</p>
+
+            <!-- Grelha Responsiva (Mais colunas em desktop, menos em mobile) -->
+            <div id="gallery-container" class="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 sm:gap-6">
+                <!-- As 22 fotos serão inseridas aqui via JavaScript -->
+            </div>
+
+            <div class="mt-8 sm:mt-12 text-center">
+                <button class="btn-primary text-white py-3 px-6 sm:px-8 rounded-xl font-bold text-base sm:text-lg shadow-lg hover:shadow-xl transition-shadow" onclick="showPage('order')">
+                    Prosseguir para Encomenda (<span id="selected-count">0</span> Produtos)
+                </button>
+            </div>
+        </section>
+
+        <!-- PÁGINA 2: FORMULÁRIO DE ENCOMENDA -->
+        <section id="order-page" class="page-section hidden">
+            <h2 class="text-3xl sm:text-4xl font-bold mb-4 text-center text-gray-800">Finalizar Encomenda</h2>
+            <p class="text-center text-gray-600 mb-6 sm:mb-8">Preencha os seus dados para confirmarmos o pedido.</p>
+
+            <div class="max-w-2xl mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-lg border border-gray-100">
+                <form id="order-form" class="space-y-6">
+                    <!-- Detalhes dos Produtos Selecionados -->
+                    <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Produtos Selecionados</label>
+                        <textarea id="selected-products-display" rows="3" readonly class="w-full p-2 border border-purple-300 rounded-lg bg-white text-gray-700 font-mono text-sm resize-none" placeholder="Nenhum produto selecionado"></textarea>
+                        <!-- Campo oculto para o Apps Script -->
+                        <input type="hidden" id="produtos_selecionados_input" name="produtos_selecionados" required>
+                    </div>
+
+                    <!-- Campos do Formulário -->
+                    <div>
+                        <label for="nome" class="block text-sm font-medium text-gray-700">Nome Completo</label>
+                        <input type="text" id="nome" name="nome" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 p-3 border">
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                            <input type="email" id="email" name="email" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 p-3 border">
+                        </div>
+                        <div>
+                            <label for="contacto" class="block text-sm font-medium text-gray-700">Contacto (Telefone)</label>
+                            <input type="tel" id="contacto" name="contacto" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 p-3 border">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="quantidade" class="block text-sm font-medium text-gray-700">Quantidade Total (Estimada)</label>
+                            <input type="number" id="quantidade" name="quantidade" min="1" value="1" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 p-3 border">
+                        </div>
+                        <div>
+                            <label for="data_preferida" class="block text-sm font-medium text-gray-700">Data Preferida para Contacto</label>
+                            <input type="date" id="data_preferida" name="data_preferida" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 p-3 border">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="mensagem" class="block text-sm font-medium text-gray-700">Mensagem Adicional (Cor, Tamanho, etc.)</label>
+                        <textarea id="mensagem" name="mensagem" rows="4" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 p-3 border"></textarea>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row justify-between items-center pt-4 space-y-4 sm:space-y-0">
+                        <button type="button" class="text-gray-600 hover:text-gray-900 font-semibold text-sm" onclick="showPage('catalogue')">
+                            ← Voltar ao Catálogo
+                        </button>
+                        <button type="submit" id="submit-button" class="btn-primary text-white py-3 px-8 rounded-xl font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center w-full sm:w-auto">
+                            <span id="submit-text">Confirmar Encomenda</span>
+                            <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // *** CONFIGURAÇÃO CRÍTICA ATUALIZADA ***
+        // URL da Google Apps Script fornecido pelo utilizador.
+        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxeK7DLsXzBRJj_whtXUHBMbGtUlaawwq_QUKSo_TtCHEdidpq6k08RYCXiP11OJ0bMA/exec"; 
+
+        // Defina os nomes dos produtos (baseado nos nomes dos ficheiros)
+        const totalProducts = 22;
+        const products = Array.from({ length: totalProducts }, (_, i) => ({
+            id: i + 1,
+            name: `Produto ${i + 1}`,
+            // Usa placeholder para simular as suas fotos (1.jpg, 2.jpg, ...)
+            imageUrl: `https://placehold.co/150x150/a78bfa/ffffff?text=${i + 1}.jpg`,
+            // Caminho real da imagem que deve estar na pasta 'fotos'
+            realImageUrl: `fotos/${i + 1}.jpg` 
+        }));
+        
+        // Estado da Aplicação
+        let selectedProductIds = new Set();
+
+        // Referências do DOM
+        const galleryContainer = document.getElementById('gallery-container');
+        const selectedCountSpan = document.getElementById('selected-count');
+        const selectedProductsDisplay = document.getElementById('selected-products-display');
+        const produtosSelecionadosInput = document.getElementById('produtos_selecionados_input');
+        const orderForm = document.getElementById('order-form');
+        const cataloguePage = document.getElementById('catalogue-page');
+        const orderPage = document.getElementById('order-page');
+        const navCatalogueButton = document.getElementById('nav-catalogue');
+        const navOrderButton = document.getElementById('nav-order');
+        const feedbackMessage = document.getElementById('feedback-message');
+        const submitButton = document.getElementById('submit-button');
+        const submitText = document.getElementById('submit-text');
+        const loadingSpinner = document.getElementById('loading-spinner');
+
+
+        // --- FUNÇÕES DE UTILITY ---
+
+        /**
+         * Exibe uma mensagem de feedback (sucesso ou erro).
+         * @param {string} message - O texto a exibir.
+         * @param {string} type - 'success' ou 'error'.
+         */
+        function showFeedback(message, type) {
+            feedbackMessage.textContent = message;
+            feedbackMessage.classList.remove('bg-green-500', 'bg-red-500', 'hidden', 'translate-x-full');
+            
+            if (type === 'success') {
+                feedbackMessage.classList.add('bg-green-500');
+            } else {
+                feedbackMessage.classList.add('bg-red-500');
+            }
+            
+            // Slide in
+            setTimeout(() => {
+                feedbackMessage.classList.remove('translate-x-full');
+            }, 50);
+
+            // Slide out after 7 seconds (Aumentei o tempo para melhor leitura)
+            setTimeout(() => {
+                feedbackMessage.classList.add('translate-x-full');
+            }, 7000);
+        }
+
+        /**
+         * Altera o estado de loading do botão de submissão.
+         * @param {boolean} isLoading - Se o formulário está a carregar.
+         */
+        function toggleLoading(isLoading) {
+            submitButton.disabled = isLoading;
+            if (isLoading) {
+                submitText.textContent = 'A Enviar...';
+                loadingSpinner.classList.remove('hidden');
+            } else {
+                submitText.textContent = 'Confirmar Encomenda';
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+
+
+        // --- FUNÇÕES PRINCIPAIS ---
+
+        /**
+         * Altera entre a página do Catálogo e a página da Encomenda.
+         * @param {string} page - 'catalogue' ou 'order'.
+         */
+        function showPage(page) {
+            if (page === 'catalogue') {
+                cataloguePage.classList.remove('hidden');
+                orderPage.classList.add('hidden');
+                // Realça o botão ativo
+                navCatalogueButton.classList.add('text-gray-900', 'font-bold', 'underline', 'decoration-purple-500');
+                navOrderButton.classList.remove('text-gray-900', 'font-bold', 'underline', 'decoration-purple-500');
+            } else if (page === 'order') {
+                // Prepara a página de encomenda com os produtos selecionados
+                updateSelectedProductsDisplay();
+                
+                if (selectedProductIds.size === 0) {
+                    showFeedback("Por favor, selecione pelo menos um produto no catálogo antes de prosseguir.", 'error');
+                    return; // Impede a mudança de página se nada estiver selecionado
+                }
+
+                cataloguePage.classList.add('hidden');
+                orderPage.classList.remove('hidden');
+                // Realça o botão ativo
+                navCatalogueButton.classList.remove('text-gray-900', 'font-bold', 'underline', 'decoration-purple-500');
+                navOrderButton.classList.add('text-gray-900', 'font-bold', 'underline', 'decoration-purple-500');
+                // Role para o topo para ver o formulário
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+
+        /**
+         * Cria e insere as miniaturas dos produtos na galeria.
+         */
+        function renderGallery() {
+            galleryContainer.innerHTML = ''; // Limpa o conteúdo existente
+
+            products.forEach(product => {
+                const card = document.createElement('div');
+                card.id = `product-${product.id}`;
+                card.classList.add(
+                    'product-card', 
+                    'bg-white', 
+                    'rounded-xl', 
+                    'shadow-md', 
+                    'overflow-hidden', 
+                    'cursor-pointer', 
+                    'transition-all', 
+                    'duration-300', 
+                    'border-2', 
+                    'border-transparent',
+                    'hover:border-purple-400'
+                );
+                card.setAttribute('data-id', product.id);
+                card.onclick = () => toggleSelection(product.id);
+
+                card.innerHTML = `
+                    <div class="aspect-square bg-gray-100 overflow-hidden">
+                        <img 
+                            src="${product.realImageUrl}" 
+                            onerror="this.onerror=null; this.src='${product.imageUrl}'"
+                            alt="${product.name}" 
+                            loading="lazy"
+                            class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        >
+                    </div>
+                    <div class="p-3 text-center">
+                        <p class="text-sm font-semibold text-gray-800 truncate">${product.name}</p>
+                        <span class="text-xs text-gray-500">Clique para selecionar</span>
+                    </div>
+                `;
+                galleryContainer.appendChild(card);
+            });
+        }
+
+
+        /**
+         * Alterna a seleção de um produto.
+         * @param {number} productId - ID do produto a selecionar/desselecionar.
+         */
+        function toggleSelection(productId) {
+            const card = document.getElementById(`product-${productId}`);
+            if (selectedProductIds.has(productId)) {
+                selectedProductIds.delete(productId);
+                card.classList.remove('selected');
+            } else {
+                selectedProductIds.add(productId);
+                card.classList.add('selected');
+            }
+            updateSelectionCount();
+        }
+
+        /**
+         * Atualiza a contagem de produtos selecionados no botão.
+         */
+        function updateSelectionCount() {
+            selectedCountSpan.textContent = selectedProductIds.size;
+        }
+
+        /**
+         * Preenche os campos de produtos na página de encomenda.
+         */
+        function updateSelectedProductsDisplay() {
+            // Ordena os IDs para uma lista consistente
+            const selectedNames = Array.from(selectedProductIds)
+                .sort((a, b) => a - b) 
+                .map(id => products.find(p => p.id === id).name)
+                .join(', ');
+
+            selectedProductsDisplay.value = selectedNames || 'Nenhum produto selecionado.';
+            produtosSelecionadosInput.value = selectedNames;
+        }
+
+
+        /**
+         * Envia os dados do formulário para a Google Apps Script.
+         * @param {Event} e - O evento de submissão do formulário.
+         */
+        async function submitOrder(e) {
+            e.preventDefault();
+
+            // Última verificação de segurança no frontend
+            if (selectedProductIds.size === 0) {
+                 showFeedback("Por favor, selecione pelo menos um produto no catálogo.", 'error');
+                 return;
+            }
+
+            toggleLoading(true);
+
+            // Cria o objeto FormData a partir do formulário
+            const formData = new FormData(orderForm);
+            
+            // Cria um objeto de URLSearchParams para o formato esperado pelo Apps Script
+            const params = new URLSearchParams();
+            for (const [key, value] of formData.entries()) {
+                params.append(key, value);
+            }
+
+            try {
+                // Tenta fazer o fetch com 3 tentativas (exponential backoff simulado)
+                let response;
+                let result;
+                let success = false;
+                
+                for (let i = 0; i < 3; i++) {
+                    response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'cors', 
+                        body: params.toString(), 
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        }
+                    });
+
+                    // Verifica se o fetch correu bem (status HTTP 200)
+                    if (response.ok) {
+                        const resultText = await response.text();
+                        try {
+                            result = JSON.parse(resultText);
+                            if (result.result === 'success') {
+                                success = true;
+                                break; // Sai do loop de tentativas
+                            } else {
+                                throw new Error(result.message || "Erro desconhecido na Apps Script.");
+                            }
+                        } catch (e) {
+                            // Erro ao analisar JSON, tentar novamente
+                            console.warn(`Tentativa ${i+1}: Resposta JSON inválida.`, resultText);
+                        }
+                    }
+                    
+                    if (i < 2) {
+                        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i))); // Espera 1s, depois 2s
+                    }
+                }
+                
+                if (success) {
+                    showFeedback("Encomenda submetida com sucesso! Obrigado! Em breve entraremos em contacto.", 'success');
+                    orderForm.reset(); // Limpa o formulário
+                    selectedProductIds.clear(); // Limpa a seleção
+                    updateSelectionCount();
+                    renderGallery(); // Redesenha a galeria para limpar o estado visual
+                    showPage('catalogue'); // Volta ao catálogo
+                } else {
+                    throw new Error("Falha na submissão após várias tentativas ou erro de Apps Script.");
+                }
+
+
+            } catch (error) {
+                console.error('Erro de Submissão:', error);
+                showFeedback(`Falha ao enviar encomenda: ${error.message}. Verifique a sua consola.`, 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        // --- INICIALIZAÇÃO ---
+        
+        // 1. Renderiza a galeria e configura o formulário quando a página carrega
+        window.onload = () => {
+            renderGallery();
+            updateSelectionCount();
+            orderForm.addEventListener('submit', submitOrder);
+            showPage('catalogue'); // Garante que começa no catálogo
+        };
+
+    </script>
+</body>
+</html>
