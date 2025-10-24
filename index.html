@@ -160,8 +160,8 @@
             name: `Produto ${i + 1}`,
             // Usa placeholder para simular as suas fotos (1.jpg, 2.jpg, ...)
             imageUrl: `https://placehold.co/150x150/a78bfa/ffffff?text=${i + 1}.jpg`,
-            // Caminho real da imagem que deve estar na pasta 'fotos'
-            realImageUrl: `fotos/${i + 1}.jpg` 
+            // Caminho real da imagem. Assumimos que '1.jpg', '2.jpg', etc., estão na mesma pasta que o index.html.
+            realImageUrl: `${i + 1}.jpg` // ALTERADO: removida a pasta 'fotos/'
         }));
         
         // Estado da Aplicação
