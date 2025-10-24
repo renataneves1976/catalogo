@@ -209,7 +209,8 @@
     <script>
         // *** CONFIGURAÇÃO CRÍTICA ATUALIZADA ***
         // URL da Google Apps Script fornecido pelo utilizador.
-        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxeK7DLsXzBRJj_whtXUHBMbGtUlaawwq_QUKSo_TtCHEdidpq6k08RYCXiP11OJ0bMA/exec"; 
+        // NOVO URL: https://script.google.com/macros/s/AKfycbxsGb3kZsFnH1nsCeJQQ7QW3M2cs4LHtTAABXvjCO-AOvRM471AgvcLwiZSy4jlP8ncHg/exec
+        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxsGb3kZsFnH1nsCeJQQ7QW3M2cs4LHtTAABXvjCO-AOvRM471AgvcLwiZSy4jlP8ncHg/exec"; 
 
         // Defina os nomes dos produtos (baseado nos nomes dos ficheiros)
         const totalProducts = 22;
@@ -487,19 +488,25 @@
                     if (response.ok) {
                         const resultText = await response.text();
                         try {
+                            // A Apps Script DEVE retornar um JSON
                             result = JSON.parse(resultText);
                             if (result.result === 'success') {
                                 success = true;
                                 break;
                             } else {
+                                // Erro na lógica do Apps Script, mas a comunicação funcionou
                                 throw new Error(result.message || "Erro desconhecido na Apps Script.");
                             }
                         } catch (e) {
-                            console.warn(`Tentativa ${i+1}: Resposta JSON inválida.`, resultText);
+                            console.warn(`Tentativa ${i+1}: Resposta JSON inválida ou erro na Apps Script.`, resultText);
                         }
+                    } else if (i < 2) {
+                        // Se a resposta HTTP falhar (4xx, 5xx) e não for a última tentativa, tenta novamente
+                        console.warn(`Tentativa ${i+1}: Falha HTTP com status ${response.status}. A tentar novamente...`);
                     }
                     
-                    if (i < 2) {
+                    if (!success && i < 2) {
+                        // Implementação de backoff exponencial
                         await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i))); 
                     }
                 }
@@ -512,13 +519,15 @@
                     renderGallery();
                     showPage('catalogue');
                 } else {
-                    throw new Error("Falha na submissão após várias tentativas ou erro de Apps Script.");
+                    // Este erro é apanhado se as 3 tentativas falharem ou o erro for externo (Failed to fetch)
+                    throw new Error("Falha na submissão após várias tentativas. Verifique as permissões da Apps Script.");
                 }
 
 
             } catch (error) {
-                console.error('Erro de Submissão:', error);
-                showFeedback(`Falha ao enviar encomenda: ${error.message}. Verifique a sua consola.`, 'error');
+                console.error('Erro CRÍTICO de Submissão:', error);
+                // Mensagem atualizada para ajudar o utilizador
+                showFeedback(`Falha ao enviar encomenda: Failed to fetch. O erro é quase sempre devido a PERMISSÕES incorretas no Google Apps Script. Por favor, re-implemente o script com acesso para 'Qualquer Pessoa'.`, 'error');
             } finally {
                 toggleLoading(false);
             }
