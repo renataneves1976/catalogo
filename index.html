@@ -1,339 +1,289 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo Estrela da Sorte</title>
-    <!-- Carregar Tailwind CSS -->
+    <title>Catálogo de Produtos - Google Sheets</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Fonte Inter para estética moderna */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-        
+        /* Estilos Personalizados */
         body {
-            font-family: 'Inter', sans-serif;
-            /* Fundo de Natal */
-            background-image: url('https://img.cdndsgni.com/preview/13116737-m.jpg');
-            background-size: cover; 
-            background-position: center center; 
-            background-repeat: no-repeat; 
-            background-attachment: fixed; 
-            min-height: 100vh;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+            background-color: #f8f8f8;
+        }
+        /* Layout de Grelha Responsiva */
+        #productGallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1.5rem;
+            padding: 1rem;
         }
 
-        /* --- Estilos do Loader (Carregamento Inicial) --- */
-        #loaderOverlay {
-            opacity: 1;
-            pointer-events: all;
+        /* Cartão de Produto */
+        .product-card {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #e5e7eb;
+            transition: transform 0.3s, box-shadow 0.3s;
         }
-        #loaderOverlay.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .loader-tree {
-            width: 150px;
-            height: 150px;
-            /* Ícone de Pinheiro/Árvore de Natal (SVG simples) */
-            fill: #10B981; /* Verde esmeralda */
-            animation: pulse 1.5s infinite alternate; /* Efeito de pulsar */
+        .product-card.selected {
+            border-color: #4f46e5; /* Índigo */
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.2);
+            transform: scale(1.01);
         }
 
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.8; }
-            100% { transform: scale(1.1); opacity: 1; }
+        /* Imagem Quadrada (Aspect Ratio 1:1) */
+        .square-image-container {
+            width: 100%;
+            padding-top: 100%; /* Mantém a proporção 1:1 */
+            position: relative;
+            overflow: hidden;
+            background-color: #f3f4f6;
+        }
+        .square-image-container img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 0.3s;
+        }
+        .square-image-container.image-fallback img {
+            object-fit: contain; /* Para placeholders */
+        }
+        
+        /* Botões de Filtro */
+        .filter-button.active {
+            background-color: #4f46e5; /* Índigo */
+            color: white;
+            border-color: #4f46e5;
+        }
+        
+        /* Ícone de Seleção */
+        .selection-icon {
+            cursor: pointer;
+            color: #4f46e5;
+            transition: transform 0.2s, background-color 0.2s;
+            padding: 0.3rem;
+            border-radius: 50%;
+        }
+        .selection-icon:hover {
+            background-color: #e0e7ff;
+        }
+        .selection-icon.selected {
+            color: #10B981; /* Verde */
+            background-color: #d1fae5;
         }
 
-        /* Estilo para a caixa de mensagem personalizada */
+        /* Ribbon Vendido */
+        .sold-ribbon {
+            position: absolute;
+            top: 10px;
+            right: -30px;
+            padding: 4px 30px;
+            background-color: #ef4444; /* Vermelho */
+            color: white;
+            font-weight: bold;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            transform: rotate(45deg);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        /* Lightbox */
+        #lightboxOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        #lightboxContent {
+            max-width: 90%;
+            max-height: 90%;
+            background: white;
+            border-radius: 0.75rem;
+            overflow: hidden;
+        }
+        #lightboxImage {
+            max-width: 100%;
+            max-height: 70vh;
+            object-fit: contain;
+        }
+
+        /* Toast Message */
         #messageBox {
             visibility: hidden;
             min-width: 250px;
             background-color: #333;
             color: #fff;
             text-align: center;
-            border-radius: 8px;
+            border-radius: 6px;
             padding: 16px;
             position: fixed;
-            z-index: 1000;
+            z-index: 10000;
             left: 50%;
-            bottom: 30px;
             transform: translateX(-50%);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            bottom: 30px;
+            opacity: 0;
+            transition: visibility 0s, opacity 0.5s;
         }
         #messageBox.show {
             visibility: visible;
-            animation: fadein 0.5s, fadeout 0.5s 2.5s;
-        }
-        @keyframes fadein {
-            from {bottom: 0; opacity: 0;} 
-            to {bottom: 30px; opacity: 1;}
-        }
-        @keyframes fadeout {
-            from {bottom: 30px; opacity: 1;} 
-            to {bottom: 0; opacity: 0;}
+            opacity: 1;
         }
 
-        /* Estilo para o Lightbox */
-        .lightbox-overlay {
+        /* Loader */
+        .loader {
+            border: 5px solid #f3f3f3; 
+            border-top: 5px solid #4f46e5; 
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #loaderOverlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-            display: none; /* Controlado por JS */
-            align-items: center;
-            justify-content: center;
-            z-index: 50;
-        }
-
-        /* Estilo para imagem de fallback */
-        .image-fallback {
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 1000;
             display: flex;
-            align-items: center;
             justify-content: center;
-            background-color: #e0e0e0;
-            color: #777;
-            text-align: center;
-            height: 100%;
-            width: 100%;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            padding: 1rem;
-        }
-        
-        /* ESTILO DE SELEÇÃO MAIS MODERNO */
-        .product-card.selected {
-            border: 4px solid #4f46e5; /* Indigo-600 */
-            box-shadow: 0 12px 20px -5px rgba(79, 70, 229, 0.4), 0 4px 6px -2px rgba(79, 70, 229, 0.1); 
-            transform: scale(1.03); /* Zoom mais proeminente */
-        }
-
-        /* ESTILO DO ÍCONE DE SELEÇÃO */
-        .selection-icon {
-            width: 40px; /* Maior para melhor toque/clique */
-            height: 40px;
-            background-color: rgba(255, 255, 255, 0.9);
-            color: #9ca3af; 
-            border: 2px solid #9ca3af;
-            font-size: 24px;
-            font-weight: bold;
-            display: flex;
             align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            border-radius: 50%;
-            line-height: 1; 
-        }
-        .selection-icon.selected {
-            background-color: #4f46e5; /* Indigo-600 no estado selecionado */
-            color: white;
-            border: 2px solid #4f46e5;
-        }
-        .selection-icon:hover {
-            transform: scale(1.1);
-        }
-
-        /* ESTILO DA FAIXA VENDIDO */
-        .sold-ribbon {
-            position: absolute;
-            top: 15px; /* Posição vertical */
-            left: -35px; /* Posição horizontal */
-            transform: rotate(-45deg); /* Rotação diagonal */
-            background-color: #ef4444; /* Vermelho forte */
-            color: white;
-            padding: 2px 40px;
-            font-weight: 900; /* Extra bold */
-            text-transform: uppercase;
-            font-size: 1rem;
-            z-index: 20;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-            border: 1px solid #dc2626; 
         }
     </style>
 </head>
-<body class="bg-gray-50">
+<body class="min-h-screen">
 
-    <!-- ECRÃ DE CARREGAMENTO ANIMADO (LOADER) -->
-    <div id="loaderOverlay" class="fixed inset-0 bg-red-800/95 z-50 flex flex-col items-center justify-center transition-opacity duration-500">
-        <svg class="loader-tree" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <!-- Pinheiro de Natal (Tree) -->
-            <path d="M12 1L3 17h4v5h10v-5h4L12 1zm0 2.828L15.343 9h-6.686L12 3.828zM10 22v-3h4v3h-4z"/>
-        </svg>
-        <p class="text-white text-xl font-bold mt-4 animate-pulse">
-            A Carregar Catálogo...
-        </p>
+    <div id="loaderOverlay" class="hidden">
+        <div class="loader"></div>
+        <p class="ml-4 text-indigo-600 font-semibold">A carregar catálogo...</p>
     </div>
 
-    <!-- Modal Lightbox (PRÉ-VISUALIZAÇÃO SIMPLIFICADA) -->
-    <div id="lightboxOverlay" class="lightbox-overlay" onclick="closeLightbox()">
-        <div class="relative bg-white p-6 rounded-lg max-w-4xl max-h-[90vh] overflow-hidden" onclick="event.stopPropagation()">
-            <button class="absolute top-2 right-2 text-xl font-bold text-gray-700 hover:text-red-500 transition" onclick="closeLightbox()">
-                &times;
-            </button>
-            <div class="flex flex-col items-center justify-center">
-                <!-- Imagem -->
-                <div class="w-full max-w-lg flex items-center justify-center p-2 mb-4">
-                    <img id="lightboxImage" src="" alt="Produto em destaque" class="max-h-[70vh] w-auto object-contain rounded-lg shadow-md">
-                </div>
-                <!-- Detalhes -->
-                <div class="text-center p-4">
-                    <h2 id="lightboxName" class="text-3xl font-extrabold text-gray-800 mb-2"></h2>
-                    <p class="text-xl text-green-600 font-bold">
-                        <span id="lightboxPrice"></span>
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Barra de Mensagem (Toast) -->
     <div id="messageBox"></div>
 
-    <!-- Header e Carrinho -->
-    <header class="bg-white shadow-md sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            
-            <!-- LOGO DE IMAGEM E NOME "ESTRELA DA SORTE" -->
-            <div class="flex items-center space-x-3">
-                <div class="h-16 flex items-center">
-                    <img src="https://live.staticflickr.com/65535/54893023864_4910f0051e_n.jpg" 
-                         alt="Logo Estrela dos Desejos" 
-                         class="h-full w-auto object-contain rounded-lg shadow-sm">
-                </div>
-                <!-- Nome da Loja ao lado do logo -->
-                <h1 class="text-3xl font-extrabold text-gray-800 hidden sm:block">Estrela da Sorte</h1>
+    <div id="lightboxOverlay" onclick="closeLightbox()">
+        <div id="lightboxContent" class="p-4" onclick="event.stopPropagation()">
+            <img id="lightboxImage" src="" alt="Imagem do Produto" class="rounded-lg shadow-xl">
+            <div class="p-4 text-center">
+                <h3 id="lightboxName" class="text-2xl font-bold text-gray-800 mb-2"></h3>
+                <p id="lightboxPrice" class="text-xl font-semibold text-green-600"></p>
+                <button onclick="closeLightbox()" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition">Fechar</button>
             </div>
-            
-            <button id="viewOrderForm" class="relative bg-pink-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-pink-600 transition duration-300 shadow-md">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.542 12 5.5 12h12.25a.25.25 0 00.25-.25v-1.5a.25.25 0 00-.25-.25H5.5c-.138 0-.25-.112-.25-.25v-1.125c0-.138.112-.25.25-.25h11.493a2.25 2.25 0 002.146-1.588L18.49 5.86a2.25 2.25 0 00-2.146-1.588H6.295c-1.071 0-2.074.521-2.673 1.353z" />
-                    <path d="M10.75 16.5a.75.75 0 100-1.5.75.75 0 000 1.5zM17.5 16.5a.75.75 0 100-1.5.75.75 0 000 1.5z" />
-                </svg>
-                Encomendar
-                <span id="cartCount" class="absolute -top-2 -right-2 bg-indigo-500 text-white text-xs font-bold px-2 py-1 rounded-full">0</span>
+        </div>
+    </div>
+
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-extrabold text-indigo-600">Catálogo Artesanal</h1>
+            <button id="viewOrderForm" class="relative bg-red-600 text-white font-bold py-2 px-4 rounded-full hover:bg-red-700 transition">
+                Ver Carrinho
+                <span id="cartCount" class="absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2 bg-yellow-400 text-red-800 text-xs font-black px-2 py-0.5 rounded-full shadow">0</span>
             </button>
         </div>
+        <div id="filterContainer" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex space-x-2 overflow-x-auto whitespace-nowrap scrollbar-hide">
+            </div>
     </header>
 
-    <!-- Fundo do conteúdo principal é branco semi-transparente para contraste -->
-    <main id="appContainer" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-white/90 rounded-xl shadow-inner my-8">
-        <!-- Secção do Catálogo -->
-        <section id="catalogueSection">
-            <h2 class="text-4xl font-extrabold text-gray-800 mb-8 text-center">O Nosso Catálogo de Produtos Únicos</h2>
-            
-            <!-- Instrução de Seleção -->
-            <div class="text-center mb-10 p-4 bg-indigo-100/70 rounded-xl shadow-md border border-indigo-300">
-                <p class="text-lg font-semibold text-indigo-700">
-                    Selecione os artigos para mais informações ou encomenda.
-                </p>
-                <p class="text-sm text-indigo-500 mt-1">
-                    (Clique no ícone <span class="font-bold text-gray-800">+</span> no canto superior direito do cartão para adicionar/remover, ou clique no cartão para ver a imagem grande.)
-                </p>
+    <section id="catalogueSection" class="max-w-7xl mx-auto p-4">
+        
+        <p id="loadingMessage" class="text-center text-indigo-600 font-semibold mt-8 hidden">A carregar produtos...</p>
+        <div id="errorMessage" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mt-8 hidden" role="alert">
+            <strong class="font-bold">Erro de Carregamento!</strong>
+            <span class="block sm:inline">Não foi possível buscar os dados do Google Sheets.</span>
+            <span class="block text-sm" id="scriptUrlDisplay"></span>
+            <span class="block text-sm">Detalhes: <span></span></span>
+        </div>
+
+        <div id="productGallery" class="mt-4">
+            </div>
+    </section>
+
+    <section id="orderSection" class="max-w-3xl mx-auto p-6 bg-white shadow-xl rounded-xl my-8 hidden">
+        <h2 class="text-3xl font-extrabold text-indigo-600 mb-6 border-b pb-2">Finalizar Encomenda</h2>
+        
+        <div class="space-y-6">
+            <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-300">
+                <h3 class="text-lg font-bold text-indigo-700 mb-2">Seus Produtos:</h3>
+                <div id="selectedProductsTotal">
+                    </div>
+                <div id="selectedProductsSummary" class="text-gray-700 text-sm mt-3">
+                    </div>
             </div>
 
-            <!-- Mensagem de erro/loading (APENAS USADA PARA EXIBIR MENSAGEM QUANDO O LOADER PRINCIPAL JÁ FOI FECHADO) -->
-            <p id="loadingMessage" class="hidden text-center text-xl text-gray-600 p-10">
-                A carregar produtos...
-            </p>
-            <p id="errorMessage" class="hidden text-center text-xl text-red-600 p-10 font-medium bg-red-100 rounded-lg border border-red-300">
-                Não foi possível carregar o catálogo de produtos.
-                <br>
-                <span id="scriptUrlDisplay" class="text-sm text-red-500 block mt-2"></span>
-            </p>
-
-            <!-- Grelha do Catálogo -->
-            <div id="productGallery" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                <!-- Produtos serão injetados aqui pelo JavaScript -->
-            </div>
-        </section>
-
-        <!-- Secção do Formulário de Encomenda -->
-        <section id="orderSection" class="hidden max-w-4xl mx-auto mt-12 bg-white p-8 rounded-xl shadow-2xl">
-            <!-- BOTÃO VOLTAR MELHORADO E DESTACADO -->
-            <button id="backToCatalogue" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-bold px-4 py-2 rounded-lg shadow-md mb-6 flex items-center transition duration-200 border border-indigo-300">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-                </svg>
-                Voltar ao Catálogo
-            </button>
-            
-            <h2 class="text-3xl font-extrabold text-gray-800 mb-6 border-b pb-2">Detalhes da Encomenda</h2>
-            
-            <form id="orderForm" class="space-y-6">
+            <form id="orderForm" class="space-y-4">
+                <h3 class="text-xl font-bold text-gray-700 pt-4 border-t">Detalhes de Contacto</h3>
                 
-                <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
-                    <h3 class="text-lg font-bold text-indigo-700 mb-2">Resumo da Seleção</h3>
-                    <div id="selectedProductsSummary" class="text-sm text-indigo-800 space-y-1">
-                        <!-- Resumo dos produtos selecionados -->
-                    </div>
-                    <input type="hidden" id="produtosSelecionadosInput" name="produtos_selecionados" required>
-                </div>
-
-                <!-- INFORMAÇÕES DE PAGAMENTO MBWAY -->
-                <div class="p-4 bg-green-50 rounded-lg border-2 border-green-300 shadow-md">
-                    <div class="flex items-center space-x-3 mb-2">
-                        <img src="https://whatthelogo.com/storage/logos/mbway-109591.png" alt="Logo MBWAY" class="w-16 h-auto">
-                        <h3 class="text-xl font-extrabold text-green-700">Pagamento Rápido</h3>
-                    </div>
-                    <p class="text-gray-700 font-semibold text-lg">
-                        MBWAY Aceite: 
-                        <span class="text-green-800 font-extrabold ml-1">935 106 743</span>
-                    </p>
-                    <p class="text-sm text-gray-600 mt-1">
-                        A encomenda será confirmada após a receção do pagamento total.
-                    </p>
-                </div>
-                <!-- FIM DO BLOCO DE PAGAMENTO -->
-
-
-                <!-- Campo Nome -->
+                <input type="hidden" id="produtosSelecionadosInput" name="produtos_selecionados">
+                <input type="hidden" id="quantidade" name="quantidade">
                 <div>
                     <label for="nome" class="block text-sm font-medium text-gray-700">Nome Completo <span class="text-red-500">*</span></label>
-                    <input type="text" id="nome" name="nome" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border">
+                    <input type="text" id="nome" name="nome" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
-
-                <!-- Campo Email -->
+                
                 <div>
                     <label for="email" class="block text-sm font-medium text-gray-700">Email <span class="text-red-500">*</span></label>
-                    <input type="email" id="email" name="email" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border">
+                    <input type="email" id="email" name="email" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
-
-                <!-- Campo Contacto -->
+                
                 <div>
                     <label for="contacto" class="block text-sm font-medium text-gray-700">Contacto Telefónico <span class="text-red-500">*</span></label>
-                    <input type="tel" id="contacto" name="contacto" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border">
+                    <input type="tel" id="contacto" name="contacto" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
-
-                <!-- Campo Quantidade -->
+                
                 <div>
-                    <label for="quantidade" class="block text-sm font-medium text-gray-700">Quantidade Total de Itens <span class="text-red-500">*</span></label>
-                    <input type="number" id="quantidade" name="quantidade" required readonly class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm bg-gray-100 p-3 border" value="0">
+                    <label for="mensagem" class="block text-sm font-medium text-gray-700">Mensagem (Morada, Notas)</label>
+                    <textarea id="mensagem" name="mensagem" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                 </div>
-
-                <!-- Campo Mensagem -->
-                <div>
-                    <label for="mensagem" class="block text-sm font-medium text-gray-700">Mensagem/Instruções Especiais</label>
-                    <textarea id="mensagem" name="mensagem" rows="4" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 border"></textarea>
+                
+                <div class="flex justify-between items-center pt-4">
+                    <button id="backToCatalogue" type="button" class="text-gray-600 hover:text-indigo-600 font-semibold flex items-center">
+                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        Voltar ao Catálogo
+                    </button>
+                    <button id="submitButton" type="submit" disabled class="bg-indigo-600 text-white font-bold py-3 px-6 rounded-full hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg">
+                        Finalizar Encomenda e Enviar Pedido
+                    </button>
                 </div>
-
-                <!-- Botão de Submissão -->
-                <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition duration-300 transform hover:scale-[1.01] shadow-xl disabled:bg-gray-400" id="submitButton">
-                    Finalizar Encomenda e Enviar Pedido
-                </button>
             </form>
-        </section>
-    </main>
+        </div>
+    </section>
 
     <script>
-        // Configurações e Estado 
-        // *** URL ATUALIZADA DO GOOGLE APPS SCRIPT ***
-        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyW3CEjhEfzjPvNmyNhiwNdxZ42O1BPXy27tSIziuLQPy4o7ZvYCznClIqVqa-eQozTcg/exec";
+        // Configurações e Estado
+        // 🚨 URL ATUALIZADO CONFORME FORNECIDO PELO UTILIZADOR
+        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwkmw1-NCkBJ6SPbTHIrj6hBEEQhrBhE3_qsd6f13i_ca42yKI-o8DfDZNT2ERorBUJwA/exec";
         
-        let productCatalogue = []; // Armazena todos os produtos carregados
-        let cart = {};             // { productIndex: count, ... }
+        // ** MAPEAMENTO DE CATEGORIAS FIXAS **
+        // ⚠️ Estes nomes DEVEM coincidir com os valores exatos da coluna 'Categoria' no Google Sheets.
+        const FIXED_DISPLAY_CATEGORIES = [
+            'Todos', 
+            'Presépios', 
+            'Anjos', 
+            'Imans', 
+            'Pendurar', 
+            'Outros'
+        ];
         
+        let productCatalogue = []; // Armazena todos os produtos carregados (filtrados ou não)
+        // O carrinho agora armazena { productIndex: count, ... }
+        let cart = {};           
+        let currentFilter = 'Todos'; // O filtro de categoria ativo
+
         // Elementos DOM
         const elements = {
             gallery: document.getElementById('productGallery'),
@@ -355,23 +305,23 @@
             lightboxName: document.getElementById('lightboxName'),
             lightboxPrice: document.getElementById('lightboxPrice'),
             backToCatalogue: document.getElementById('backToCatalogue'),
-            loaderOverlay: document.getElementById('loaderOverlay') // Adicionado o loader
+            loaderOverlay: document.getElementById('loaderOverlay'), 
+            filterContainer: document.getElementById('filterContainer'),
+            // 🛠️ NOVO ELEMENTO para o Preço Total
+            orderTotalInput: null, // Será criado dinamicamente se não existir
+            orderTotalSummary: null, // Será criado dinamicamente se não existir
         };
 
         /**
          * Exibe uma mensagem de notificação (Toast).
-         * @param {string} message - A mensagem a exibir.
-         * @param {string} type - 'success' ou 'error'.
          */
         function showMessage(message, type = 'success') {
             const box = elements.messageBox;
             box.textContent = message;
             box.className = 'show';
             
-            // Define cor de fundo
             box.style.backgroundColor = type === 'success' ? '#10B981' : '#EF4444'; 
 
-            // Esconde a mensagem após 3 segundos
             setTimeout(() => {
                 box.className = box.className.replace("show", "");
             }, 3000);
@@ -379,10 +329,6 @@
 
         /**
          * Tenta fazer fetch com retries e espera exponencial (backoff).
-         * Útil para Apps Scripts onde o primeiro fetch pode falhar devido a questões de rede/iframe.
-         * @param {string} url - O URL para o qual fazer fetch.
-         * @param {number} retries - Número máximo de retries.
-         * @param {number} delay - Atraso inicial em milissegundos.
          */
         async function fetchWithRetry(url, retries = 3, delay = 1000) {
             for (let i = 0; i < retries; i++) {
@@ -394,7 +340,6 @@
                 } catch (error) {
                     console.warn(`Tentativa ${i + 1} de fetch falhou: ${error.message}. A tentar novamente em breve...`);
                 }
-                // Se falhou e ainda há tentativas, espera antes de tentar novamente (backoff exponencial)
                 if (i < retries - 1) {
                     await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
                 }
@@ -404,18 +349,14 @@
 
 
         /**
-         * Simplesmente devolve o URL. Assumimos que o URL do Flickr/CDN é direto e válido para a tag <img>.
-         * @param {string} url - O URL do arquivo de imagem.
-         * @returns {string} O URL inalterado.
+         * Simplesmente devolve o URL.
          */
         function getDirectImageUrl(url) {
             return url;
         }
 
         /**
-         * Função de verificação robusta para o estado "Vendido" (lida com boolean, "TRUE", "SIM", etc.).
-         * @param {any} value - O valor da coluna Vendido.
-         * @returns {boolean} True se o produto for considerado vendido.
+         * Função de verificação robusta para o estado "Vendido".
          */
         function isProductSold(value) {
             if (value === true) return true;
@@ -425,10 +366,122 @@
             }
             return false;
         }
+        
+        /**
+         * Determina a categoria de exibição de um produto com base no seu nome/código.
+         * ⚠️ Esta função não é mais usada para FILTRAR (o backend faz isso), 
+         * mas é mantida por segurança ou para visualização adicional, se necessário.
+         */
+        function getDisplayCategory(product) {
+            const searchString = ((product.Name || '') + ' ' + (product.Category || '')).toUpperCase().trim();
+
+            if (searchString.includes("PRES")) return "Presépios";
+            if (searchString.includes("ANJ")) return "Anjos";
+            if (searchString.includes("IMA")) return "Imans";
+            if (searchString.includes("PEND")) return "Pendurar";
+            
+            // 🚨 Fallback para o valor literal retornado pelo backend
+            if (product.Categoria) return product.Categoria;
+
+            return "Outros";
+        }
+
+        /**
+         * @returns {number} O valor total da encomenda.
+         */
+        function calculateOrderTotal() {
+            let total = 0;
+            productCatalogue.forEach((product, index) => {
+                const count = cart[index] || 0;
+                if (count > 0) {
+                    // Assume que product.Price é um número (ou pode ser convertido)
+                    const price = parseFloat(product.Price) || 0;
+                    total += price * count;
+                }
+            });
+            return total;
+        }
+
+
+        /**
+         * Valida e ajusta a quantidade inserida, e atualiza o carrinho se o item já estiver selecionado.
+         */
+        function validateQty(inputElement, productIndex) {
+            let value = parseInt(inputElement.value);
+            if (isNaN(value) || value < 1) {
+                value = 1;
+            } else if (value > 99) { 
+                value = 99; 
+            }
+            inputElement.value = value;
+            
+            if ((cart[productIndex] || 0) > 0) {
+                cart[productIndex] = value;
+                updateCartDisplay();
+            }
+        }
+
+        /**
+         * Configura os listeners para os botões de incremento/decremento da quantidade.
+         */
+        function setupQuantityControls() {
+            document.querySelectorAll('.qty-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+
+                    const productIndex = parseInt(e.currentTarget.dataset.id);
+                    const action = e.currentTarget.dataset.action;
+                    const input = document.getElementById(`qty-${productIndex}`);
+                    let currentQty = parseInt(input.value);
+
+                    if (action === 'increment') {
+                        currentQty = Math.min(currentQty + 1, 99);
+                    } else if (action === 'decrement') {
+                        currentQty = Math.max(currentQty - 1, 1);
+                    }
+                    
+                    input.value = currentQty;
+                    
+                    if ((cart[productIndex] || 0) > 0) {
+                         cart[productIndex] = currentQty;
+                         updateCartDisplay();
+                         showMessage(`Qtd. de ${productCatalogue[productIndex].Name} atualizada para ${currentQty}.`, 'success');
+                    }
+                });
+            });
+        }
+
+        /**
+         * Adiciona ou remove um item do carrinho, usando a quantidade do input.
+         */
+        function handleSelectionClick(productIndex) {
+            const product = productCatalogue[productIndex];
+            
+            if (isProductSold(product.Vendido)) {
+                showMessage(`Este item está vendido e não pode ser encomendado.`, 'error');
+                return; 
+            }
+
+            const currentCount = cart[productIndex] || 0;
+            const qtyInput = document.getElementById(`qty-${productIndex}`);
+            validateQty(qtyInput, productIndex);
+            const selectedQty = parseInt(qtyInput.value) || 1; 
+
+            if (currentCount === 0) {
+                cart[productIndex] = selectedQty;
+                showMessage(`Produto ${product.Name} adicionado (x${selectedQty}).`, 'success');
+            } else {
+                delete cart[productIndex]; 
+                showMessage(`Produto ${product.Name} removido.`, 'error');
+                qtyInput.value = 1; 
+            }
+            
+            // 🚨 Atualiza o estado visual, que agora inclui o total
+            updateCartDisplay(); 
+        }
 
         /**
          * Atualiza o estado visual de um único cartão (borda, sombra, ícone de pisco).
-         * @param {number} index - O índice do produto.
          */
         function updateCardState(index) {
             const cardElement = document.getElementById(`product-card-${index}`);
@@ -436,17 +489,14 @@
             const isSelected = (cart[index] || 0) > 0;
 
             if (cardElement) {
-                // Adiciona ou remove a classe 'selected' para a borda visual
                 cardElement.classList.toggle('selected', isSelected);
             }
 
             if (iconElement) {
-                // Adiciona ou remove a classe 'selected' para a cor do ícone
                 iconElement.classList.toggle('selected', isSelected);
-                // Altera o SVG do ícone (Checkmark ou Plus)
                 iconElement.innerHTML = isSelected 
-                            ? `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><polyline points="20 6 9 17 4 12"></polyline></svg>` 
-                            : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M5 12h14"/><path d="M12 5v14"/></svg>`;
+                    ? `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><polyline points="20 6 9 17 4 12"></polyline></svg>` 
+                    : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M5 12h14"/><path d="M12 5v14"/></svg>`;
             }
         }
 
@@ -457,26 +507,40 @@
             let totalCount = 0;
             let summaryHTML = '';
             let selectedProductNames = [];
+            const orderTotal = calculateOrderTotal(); // 🛠️ NOVO CÁLCULO TOTAL
 
-            // 1. Calcular totais e construir resumo
             productCatalogue.forEach((product, index) => {
                 const count = cart[index] || 0;
                 
-                // 2. Atualizar o estado visual do cartão (IMPORTANTE)
                 updateCardState(index); 
 
                 if (count > 0) {
                     totalCount += count;
-                    summaryHTML += `<p>• ${product.Name} (x${count})</p>`;
+                    const price = parseFloat(product.Price) || 0;
+                    const subtotal = (price * count).toFixed(2);
+                    summaryHTML += `<p>• ${product.Name} (x${count}) - ${subtotal} €</p>`; // Exibe subtotal
                     selectedProductNames.push(`${product.Name} (x${count})`);
                 }
             });
-
+            
+            // 2. Atualiza os elementos globais
             elements.cartCount.textContent = totalCount;
             elements.quantidadeInput.value = totalCount;
-            // Prepara a string para o Apps Script (ex: "Produto A (x1); Produto B (x2)")
             elements.produtosSelecionadosInput.value = selectedProductNames.join('; ');
             
+            // 🛠️ NOVO: Atualiza o campo oculto do valor total e o resumo
+            if (elements.orderTotalInput) {
+                elements.orderTotalInput.value = orderTotal.toFixed(2);
+            }
+            if (elements.orderTotalSummary) {
+                 elements.orderTotalSummary.innerHTML = `
+                    <div class="text-xl font-extrabold text-red-600 mt-1">
+                        TOTAL DA ENCOMENDA: ${orderTotal.toFixed(2)} €
+                    </div>
+                `;
+            }
+            
+            // Atualiza o estado do botão de submissão
             if (totalCount === 0) {
                 summaryHTML = `<p class="text-red-600 font-medium">O seu carrinho está vazio. Volte ao catálogo para adicionar produtos.</p>`;
                 elements.submitButton.disabled = true;
@@ -488,50 +552,19 @@
         }
 
         /**
-         * Adiciona ou remove um item do carrinho (alternando entre 0 e 1).
-         * @param {number} productIndex - O índice do produto no array productCatalogue.
-         */
-        function toggleSelection(productIndex) {
-            const product = productCatalogue[productIndex];
-            
-            // Usar a nova função de verificação robusta
-            const isSold = isProductSold(product.Vendido);
-            
-            if (isSold) {
-                showMessage(`Este item está vendido e não pode ser encomendado.`, 'error');
-                return; 
-            }
-
-            const currentCount = cart[productIndex] || 0;
-
-            if (currentCount === 0) {
-                cart[productIndex] = 1; // Seleciona (define a 1)
-                showMessage(`Produto ${product.Name} adicionado.`, 'success');
-            } else {
-                delete cart[productIndex]; // Desseleciona (remove)
-                showMessage(`Produto ${product.Name} removido.`, 'error');
-            }
-            updateCartDisplay();
-        }
-
-        /**
          * Abre o modal de lightbox com a pré-visualização.
-         * @param {number} productIndex - Índice do produto.
          */
         function openLightbox(productIndex) {
             const product = productCatalogue[productIndex];
             if (!product) return;
 
-            // Formatação do preço com verificação de NaN
             const formattedPrice = isNaN(parseFloat(product.Price)) 
                 ? "Preço Indisponível" 
                 : `${parseFloat(product.Price).toFixed(2)} €`;
 
-            // Usa o URL do Flickr/CDN diretamente
             const imageUrl = getDirectImageUrl(product.ImageFile);
 
             elements.lightboxImage.src = imageUrl;
-            // Define a imagem de fallback em caso de erro de carregamento (URL inválido)
             elements.lightboxImage.onerror = () => {
                  elements.lightboxImage.classList.add('image-fallback');
                  elements.lightboxImage.src = "https://placehold.co/400x300/e0e0e0/777?text=Imagem+Indisponível";
@@ -551,197 +584,308 @@
         }
 
         /**
-         * Renderiza o catálogo de produtos na grelha.
+         * Define o filtro ativo e recarrega o catálogo do Apps Script.
          */
-        function renderGallery(products) {
-            elements.gallery.innerHTML = ''; // Limpa a galeria
-            if (products.length === 0) {
-                elements.gallery.innerHTML = `<p class="col-span-full text-center text-xl text-gray-500 p-10">
-                    De momento, não temos produtos disponíveis no catálogo.
-                </p>`;
-                return;
-            }
-
-            products.forEach((product, index) => {
-                const priceValue = parseFloat(product.Price);
-                const formattedPrice = isNaN(priceValue) 
-                    ? "Preço Indisponível" 
-                    : `${priceValue.toFixed(2)} €`;
-                
-                const imageUrl = getDirectImageUrl(product.ImageFile);
-                
-                // --- LÓGICA DE VENDIDO ---
-                const isSold = isProductSold(product.Vendido);
-                
-                const card = document.createElement('div');
-                card.id = `product-card-${index}`;
-                // 'product-card' é a classe que o CSS usa para aplicar o estilo 'selected'
-                // Certifica-se que 'relative' está presente para o ribbon
-                card.className = 'product-card bg-white rounded-xl shadow-lg hover:shadow-xl transition duration-300 transform hover:-translate-y-1 overflow-hidden cursor-pointer flex flex-col relative border-2 border-transparent';
-                
-                // Clicar no cartão abre apenas a pré-visualização (Lightbox)
-                card.onclick = () => openLightbox(index);
-
-                // Checkmark (Pisco) Overlay
-                const isSelected = (cart[index] || 0) > 0;
-                
-                // Reduzimos a altura da imagem para h-40
-                card.innerHTML = `
-                    ${isSold ? '<div class="sold-ribbon">VENDIDO</div>' : ''}
-
-                    <div id="select-icon-${index}" 
-                         class="absolute top-3 right-3 z-10 selection-icon ${isSelected ? 'selected' : ''}" 
-                         onclick="event.stopPropagation(); toggleSelection(${index});"
-                         aria-label="Selecionar para encomenda"
-                         ${isSold ? 'style="pointer-events: none; opacity: 0.5;"' : ''} > <!-- Desativa o ícone se vendido -->
-                        ${isSelected 
-                            ? `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><polyline points="20 6 9 17 4 12"></polyline></svg>` 
-                            : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M5 12h14"/><path d="M12 5v14"/></svg>`}
-                    </div>
-                    
-                    <div class="h-40 relative overflow-hidden">
-                        <img src="${imageUrl}" alt="${product.Name}" 
-                             class="w-full h-full object-cover transition duration-300 hover:scale-105 ${isSold ? 'opacity-40' : ''}" 
-                             onerror="this.onerror=null; this.src='https://placehold.co/400x300/e0e0e0/777?text=Imagem+Indisponível'; this.parentElement.classList.add('image-fallback');">
-                    </div>
-                    <div class="p-4 flex-grow flex flex-col">
-                        <h3 class="text-xl font-bold text-gray-800 mb-1">${product.Name}</h3>
-                        <p class="text-2xl font-extrabold text-green-600 mt-auto">${formattedPrice}</p>
-                    </div>
-                `;
-                elements.gallery.appendChild(card);
-                
-                // Aplica o estado inicial, caso já existam itens no carrinho
-                updateCardState(index);
+        function setFilter(filterName) {
+            currentFilter = filterName;
+            
+            // 🛠️ NOVO: Chama a recarga de dados com o filtro.
+            loadCatalogue();
+            
+            // Atualizar estado ativo dos botões visuais
+            document.querySelectorAll('#filterContainer button').forEach(button => {
+                button.classList.remove('active');
+                if (button.textContent.trim() === filterName) {
+                    button.classList.add('active');
+                }
             });
         }
-
+        
         /**
-         * Faz a chamada GET à Apps Script para obter a lista de produtos.
+         * Carrega os produtos do Google Sheets, aplicando o filtro de categoria atual.
+         * 🚨 Implementação de filtro via parâmetro 'category' para o Apps Script.
          */
-        async function fetchCatalogue() {
-            // MOSTRA O LOADER
+        async function loadCatalogue() {
+            elements.loadingMessage.classList.remove('hidden');
+            elements.gallery.innerHTML = '';
+            elements.errorMessage.classList.add('hidden');
             elements.loaderOverlay.classList.remove('hidden');
 
-            elements.loadingMessage.classList.remove('hidden'); // Esta é a antiga, vamos mantê-la oculta, mas a remover o 'hidden' se algo correr mal
-            elements.errorMessage.classList.add('hidden');
-            elements.scriptUrlDisplay.textContent = `A URL de serviço atual é: ${GOOGLE_APPS_SCRIPT_URL}`;
+            // 🛠️ Constrói a URL com o parâmetro de filtro para o Apps Script
+            let url = GOOGLE_APPS_SCRIPT_URL + '?action=getProducts';
+            if (currentFilter && currentFilter !== 'Todos') {
+                url += `&category=${encodeURIComponent(currentFilter)}`;
+            }
+            
+            elements.scriptUrlDisplay.textContent = `A tentar buscar dados (Filtro: ${currentFilter}) de: ${url}`; 
 
             try {
-                // Adicionamos 'action=getProducts' como parâmetro de consulta para o doGet
-                const finalApiUrl = `${GOOGLE_APPS_SCRIPT_URL}?action=getProducts`;
-
-                // *** USAMOS FETCH COM RETRY PARA MAIOR ROBUSTEZ ***
-                const response = await fetchWithRetry(finalApiUrl);
-
-                if (!response.ok) {
-                    throw new Error(`Erro HTTP: ${response.status} - ${response.statusText}`);
-                }
-
+                const response = await fetchWithRetry(url);
                 const data = await response.json();
                 
                 if (data.result === 'error') {
-                     throw new Error(`Erro do Servidor Apps Script: ${data.message}`);
+                    throw new Error(data.message);
                 }
 
-                // O Apps Script usa chaves 'Name', 'ImageFile', 'Price', 'Vendido' etc., que são mapeadas a partir dos cabeçalhos.
-                productCatalogue = data.products || [];
+                // O Apps Script agora retorna SÓ os produtos filtrados.
+                productCatalogue = data.products.map((p, index) => ({
+                    // O índice é essencial para o carrinho
+                    ...p,
+                    index: index 
+                }));
                 
-                // Organizar por ordem alfabética do nome do produto
-                productCatalogue.sort((a, b) => a.Name.localeCompare(b.Name, 'pt'));
+                elements.loadingMessage.classList.add('hidden');
                 
-                renderGallery(productCatalogue);
+                // Renderiza o catálogo com a lista de produtos recebida
+                renderGallery(productCatalogue); 
+                setupQuantityControls();
+                updateCartDisplay(); 
 
             } catch (error) {
-                console.error("Erro ao carregar o catálogo:", error);
+                console.error("Erro ao carregar catálogo:", error);
                 elements.errorMessage.classList.remove('hidden');
-                elements.errorMessage.innerHTML = `
-                    Não foi possível carregar o catálogo de produtos. 
-                    <br>
-                    **Erro:** ${error.message}
-                    <br>
-                    <span id="scriptUrlDisplay" class="text-sm text-red-500 block mt-2">Verifique se o Apps Script foi re-publicado com o código mais recente e se o nome da folha ('Produtos') está correto.</span>
-                `;
+                elements.errorMessage.querySelector('span').textContent = `Detalhes: ${error.message}`;
+                elements.loadingMessage.classList.add('hidden');
                 elements.gallery.innerHTML = '';
             } finally {
-                // ESCONDE O LOADER
-                elements.loaderOverlay.classList.add('hidden');
-                elements.loadingMessage.classList.add('hidden');
+                // Pequeno delay para a animação do loader ser visível
+                setTimeout(() => elements.loaderOverlay.classList.add('hidden'), 500);
             }
+        }
+        
+        /**
+         * Gera o HTML para um único cartão de produto.
+         */
+        function renderProductCard(product, index) {
+            const isSold = isProductSold(product.Vendido);
+            const isSelected = (cart[index] || 0) > 0;
+            const formattedPrice = isNaN(parseFloat(product.Price)) ? "Preço N/D" : `${parseFloat(product.Price).toFixed(2)} €`;
+            const initialQty = cart[index] || 1;
+            const imageUrl = getDirectImageUrl(product.ImageFile);
+            
+            // Use o Code como um ID visível, se disponível
+            const codeDisplay = product.Code ? `<span class="text-xs font-mono text-gray-500 block mb-1">${product.Code}</span>` : '';
+
+
+            return `
+                <div id="product-card-${index}" 
+                     class="product-card bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden flex flex-col ${isSelected ? 'selected' : ''} ${isSold ? 'opacity-70 grayscale' : 'hover:scale-[1.02] cursor-pointer'}"
+                     onclick="openLightbox(${index})">
+                    
+                    ${isSold ? '<div class="sold-ribbon">VENDIDO</div>' : ''}
+
+                    <div class="square-image-container flex-shrink-0">
+                        <img src="${imageUrl}" 
+                             alt="${product.Name}" 
+                             class="square-image-container img"
+                             onerror="this.onerror=null; this.src='https://placehold.co/200x200/e0e0e0/777?text=Imagem+N/D'; this.parentNode.classList.add('image-fallback');"
+                        >
+                    </div>
+
+                    <div class="p-4 flex flex-col justify-between flex-grow">
+                        <div>
+                            ${codeDisplay}
+                            <h3 class="text-md font-bold text-gray-800 mb-1">${product.Name}</h3>
+                            <p class="text-sm font-semibold ${isSold ? 'text-gray-400' : 'text-green-600'}">${formattedPrice}</p>
+                        </div>
+                        
+                        <div class="mt-4 flex items-center justify-between space-x-2">
+                            <div class="flex items-center space-x-1 bg-gray-100 p-1 rounded-lg">
+                                <button type="button" 
+                                        class="qty-btn bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-full w-6 h-6 text-sm font-bold disabled:opacity-50"
+                                        data-id="${index}" 
+                                        data-action="decrement"
+                                        ${isSold ? 'disabled' : ''}>-</button>
+                                <input type="number" 
+                                       id="qty-${index}" 
+                                       value="${initialQty}" 
+                                       min="1" 
+                                       max="99"
+                                       onchange="validateQty(this, ${index})"
+                                       class="w-8 text-center text-gray-800 text-sm font-medium bg-transparent focus:outline-none disabled:opacity-50"
+                                       ${isSold ? 'disabled' : ''}>
+                                <button type="button" 
+                                        class="qty-btn bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-full w-6 h-6 text-sm font-bold disabled:opacity-50"
+                                        data-id="${index}" 
+                                        data-action="increment"
+                                        ${isSold ? 'disabled' : ''}>+</button>
+                            </div>
+                            
+                            <div id="select-icon-${index}" 
+                                 class="selection-icon ${isSelected ? 'selected' : ''}" 
+                                 data-id="${index}"
+                                 onclick="event.stopPropagation(); handleSelectionClick(${index});">
+                                 ${isSelected 
+                                    ? `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><polyline points="20 6 9 17 4 12"></polyline></svg>` 
+                                    : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M5 12h14"/><path d="M12 5v14"/></svg>`
+                                 }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         /**
-         * Lida com a submissão do formulário de encomenda (POST).
-         * @returns {void}
+         * Renderiza o catálogo de produtos na grelha.
          */
-        async function handleOrderSubmission(event) {
+        function renderGallery(products) {
+            elements.gallery.innerHTML = products.map((product, index) => renderProductCard(product, index)).join('');
+            // Importante: Re-anexar listeners após a renderização
+            setupQuantityControls();
+        }
+        
+        /**
+         * Gera e renderiza os botões de filtro de categoria (usando a lista fixa).
+         */
+        function renderFilterButtons() {
+            elements.filterContainer.innerHTML = ``;
+
+            FIXED_DISPLAY_CATEGORIES.forEach(category => {
+                const button = document.createElement('button');
+                button.textContent = category;
+                button.className = 'filter-button bg-white text-indigo-600 border border-indigo-300 px-4 py-2 rounded-full font-semibold hover:bg-indigo-50 transition duration-150';
+                button.onclick = () => setFilter(category);
+                
+                if (category === currentFilter) {
+                    button.classList.add('active');
+                }
+                
+                elements.filterContainer.appendChild(button);
+            });
+        }
+
+        // --- Lógica de Submissão ---
+
+        /**
+         * 🛠️ NOVO: Adiciona o campo de Valor Total (oculto e visível) ao formulário.
+         */
+        function setupOrderFormFields() {
+            // Campo oculto para submeter o valor total
+            const totalInputHTML = `
+                <input type="hidden" id="valorTotalInput" name="valor_total_encomenda" value="0.00" required>
+            `;
+            // Bloco de resumo visível
+            const totalSummaryHTML = `
+                <div id="selectedProductsTotal" class="bg-red-50 p-4 rounded-lg border border-red-300">
+                    <div class="text-lg font-bold text-red-700 mb-1">Preço Total Estimado</div>
+                    <div id="orderTotalSummary" class="text-lg font-extrabold text-red-800">
+                        A calcular...
+                    </div>
+                </div>
+            `;
+
+            // 1. Injeta o campo oculto (se não existir)
+            if (!document.getElementById('valorTotalInput')) {
+                 elements.orderForm.insertAdjacentHTML('afterbegin', totalInputHTML);
+                 elements.orderTotalInput = document.getElementById('valorTotalInput');
+            }
+
+            // 2. Injeta o resumo visível antes do resumo dos produtos
+            const summaryBlock = document.querySelector('.bg-indigo-50');
+            if (summaryBlock && !document.getElementById('selectedProductsTotal')) {
+                 summaryBlock.insertAdjacentHTML('beforebegin', totalSummaryHTML);
+                 elements.orderTotalSummary = document.getElementById('orderTotalSummary');
+            }
+        }
+
+
+        /**
+         * Trata a submissão do formulário de encomenda para o Apps Script.
+         */
+        async function submitOrder(event) {
             event.preventDefault();
+            
             elements.submitButton.disabled = true;
-            elements.submitButton.textContent = 'A Enviar...';
-            
-            // O Apps Script Web App espera o FormData diretamente
-            const formData = new FormData(elements.orderForm);
-            
-            // Adiciona a ação para o doPost saber o que fazer
-            formData.append('action', 'submitOrder'); 
+            elements.submitButton.textContent = 'A Enviar Encomenda...';
+
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            data.action = 'submitOrder'; // Ação para o Apps Script
+
+            // 🛠️ NOVO: Adiciona o Preço Total (obtido do campo oculto)
+            data.valor_total_encomenda = elements.orderTotalInput.value; 
 
             try {
-                // Para o Apps Script, usamos 'no-cors' no POST com FormData. 
-                // Assumimos que o Apps Script vai processar e devolver uma resposta.
                 const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
                     method: 'POST',
-                    body: formData,
-                    mode: 'no-cors' 
+                    body: new URLSearchParams(data)
                 });
 
-                // Como usamos 'no-cors', não podemos ler a resposta JSON, 
-                // mas a requisição é enviada. Assumimos sucesso.
-                
-                showMessage("Encomenda submetida com sucesso! O registo foi guardado na sua folha de cálculo.", 'success');
-                
-                // Reset do estado
-                cart = {};
-                updateCartDisplay(); // Limpa o carrinho e remove os "piscos"
-                elements.orderForm.reset();
-                
-                // Alternar de volta para o catálogo
-                elements.catalogueSection.classList.remove('hidden');
-                elements.orderSection.classList.add('hidden');
-                
-                // Tenta recarregar o catálogo para verificar se o stock (Vendido) mudou
-                fetchCatalogue(); 
-                
+                const result = await response.json();
+
+                if (result.result === 'success') {
+                    showMessage('✅ Encomenda enviada com sucesso! Aguarde o nosso contacto.', 'success');
+                    form.reset(); 
+                    cart = {}; // Limpa o carrinho
+                    updateCartDisplay(); 
+                    showCatalogue(); // Volta ao catálogo
+                } else {
+                    showMessage(`❌ Erro ao enviar: ${result.message}`, 'error');
+                }
             } catch (error) {
-                // Este catch só apanha erros de rede, não erros de lógica do Apps Script
-                console.error("Erro na submissão da encomenda:", error);
-                showMessage("Erro ao submeter a encomenda. Tente novamente.", 'error');
+                console.error("Erro na submissão:", error);
+                showMessage('❌ Erro de rede ou servidor. Tente novamente mais tarde.', 'error');
             } finally {
                 elements.submitButton.disabled = false;
                 elements.submitButton.textContent = 'Finalizar Encomenda e Enviar Pedido';
             }
         }
 
-        // --- EVENT LISTENERS ---
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            // 1. Carregar o catálogo na inicialização
-            fetchCatalogue(); 
+        // --- Funções de Navegação e Inicialização ---
+
+        function showOrderForm() {
+            if (Object.keys(cart).length === 0) {
+                showMessage('Adicione produtos ao carrinho antes de encomendar.', 'error');
+                return;
+            }
+            elements.catalogueSection.classList.add('hidden');
+            elements.orderSection.classList.remove('hidden');
+            updateCartDisplay(); // Força a atualização do resumo final
+        }
+
+        function showCatalogue() {
+            elements.orderSection.classList.add('hidden');
+            elements.catalogueSection.classList.remove('hidden');
+            updateCartDisplay(); // Para garantir que o estado do catálogo está correto
+        }
+
+        /**
+         * Inicialização principal
+         */
+        function init() {
+            // Configura a visualização inicial (Loader)
+            elements.loaderOverlay.classList.remove('hidden'); 
+
+            // Configura campos do formulário para o novo valor total
+            setupOrderFormFields(); 
             
-            // 2. Lógica para alternar entre catálogo e formulário
-            elements.viewOrderForm.addEventListener('click', () => {
-                elements.catalogueSection.classList.add('hidden');
-                elements.orderSection.classList.remove('hidden');
-                updateCartDisplay(); 
-            });
+            // Configura listeners de navegação
+            elements.viewOrderForm.addEventListener('click', showOrderForm);
+            elements.backToCatalogue.addEventListener('click', showCatalogue);
+            elements.orderForm.addEventListener('submit', submitOrder);
+            
+            // Renderiza botões de filtro (antes de carregar)
+            renderFilterButtons();
 
-            elements.backToCatalogue.addEventListener('click', () => {
-                elements.catalogueSection.classList.remove('hidden');
-                elements.orderSection.classList.add('hidden');
+            // 🚨 Inicia o carregamento do catálogo (chama o filtro 'Todos' e o fetch)
+            setFilter('Todos');
+            
+            // Listener global para fechar o lightbox com a tecla ESC
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeLightbox();
+                }
             });
+        }
 
-            // 3. Submissão do formulário
-            elements.orderForm.addEventListener('submit', handleOrderSubmission);
-        });
+        // Inicia a aplicação quando o DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', init);
+        
+        // Funções globais necessárias no escopo do HTML (onclick)
+        window.openLightbox = openLightbox;
+        window.closeLightbox = closeLightbox;
 
     </script>
 </body>
