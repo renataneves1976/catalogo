@@ -433,11 +433,13 @@
         }
         
         /**
-         * Determina a categoria de exibição de um produto com base na coluna 'Category'.
-         * Usaremos o valor da coluna 'Category' diretamente.
+         * Determina a categoria de exibição de um produto com base na coluna 'category' (em minúsculas).
+         * @param {Object} product - O objeto do produto.
+         * @returns {string} - O nome da categoria.
          */
         function getDisplayCategory(product) {
-            return (product.Category || 'Outros').trim(); 
+            // CORRIGIDO: Usa 'category' em minúsculas
+            return (product.category || 'Outros').trim(); 
         }
 
 
